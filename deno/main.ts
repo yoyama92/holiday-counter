@@ -1,5 +1,20 @@
 import { parse } from "https://deno.land/std@0.192.0/datetime/mod.ts";
 
+const main = async (args: string[]) => {
+  // 入力をパース
+  const targetYearMonth = parseYearMonth(args[0]);
+  const targetYear = targetYearMonth.getFullYear();
+  const targetMonth = targetYearMonth.getMonth() + 1;
+
+  const targetDays = generateTargetMonthDays(targetYear, targetMonth);
+  const publicHolidays = await fetchPublicHolidays(targetYear, targetMonth);
+
+  // 週末＋祝日から休日数を求める。週末と被った祝日は２重カウントになっているので調整する。
+  const count = countWeekend(targetDays) + publicHolidays.length - countWeekend(publicHolidays);
+
+  console.log(count);
+};
+
 /**
  * 対象年月の祝日一覧を取得する。
  * @param targetYear
@@ -61,17 +76,6 @@ export const countWeekend = (days: Date[]): number => {
   return count;
 };
 
-const args = Deno.args;
-
-// 入力をパース
-const targetYearMonth = parseYearMonth(args[0]);
-const targetYear = targetYearMonth.getFullYear();
-const targetMonth = targetYearMonth.getMonth() + 1;
-
-const targetDays = generateTargetMonthDays(targetYear, targetMonth);
-const publicHolidays = await fetchPublicHolidays(targetYear, targetMonth);
-
-// 週末＋祝日から休日数を求める。週末と被った祝日は２重カウントになっているので調整する。
-const count = countWeekend(targetDays) + publicHolidays.length - countWeekend(publicHolidays);
-
-console.log(count);
+if (import.meta.main) {
+  await main(Deno.args);
+}

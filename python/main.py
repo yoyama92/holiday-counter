@@ -4,6 +4,18 @@ import calendar
 import requests
 
 
+def main(argv):
+    target_year_month = parse_year_month(argv[1])
+    target_year = target_year_month.year
+    target_month = target_year_month.month
+
+    target_days = generate_target_month_days(target_year, target_month)
+    public_holidays = fetch_public_holidays(target_year, target_month)
+
+    count = count_weekend(target_days) + len(public_holidays) - count_weekend(public_holidays)
+    print(count)
+
+
 def fetch_public_holidays(target_year: int, target_month: int) -> list[datetime.date]:
     """
     対象年月の祝日一覧を取得する。
@@ -42,14 +54,5 @@ def count_weekend(days: list[datetime.date]) -> int:
     return count
 
 
-argv = sys.argv
-
-target_year_month = parse_year_month(argv[1])
-target_year = target_year_month.year
-target_month = target_year_month.month
-
-target_days = generate_target_month_days(target_year, target_month)
-public_holidays = fetch_public_holidays(target_year, target_month)
-
-count = count_weekend(target_days) + len(public_holidays) - count_weekend(public_holidays)
-print(count)
+if __name__ == "__main__":
+    main(sys.argv)
