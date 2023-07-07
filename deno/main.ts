@@ -3,17 +3,82 @@ import { parse } from "https://deno.land/std@0.192.0/datetime/mod.ts";
 const main = async (args: string[]) => {
   // 入力をパース
   const targetYearMonth = parseYearMonth(args[0]);
-  const targetYear = targetYearMonth.getFullYear();
-  const targetMonth = targetYearMonth.getMonth() + 1;
 
-  const targetDays = generateTargetMonthDays(targetYear, targetMonth);
-  const publicHolidays = await fetchPublicHolidays(targetYear, targetMonth);
+  // 祝日一覧
+  const publicHolidays = await fetchPublicHolidays(targetYearMonth);
 
   // 週末＋祝日から休日数を求める。週末と被った祝日は２重カウントになっているので調整する。
-  const count = countWeekend(targetDays) + publicHolidays.length - countWeekend(publicHolidays);
+  const count = targetYearMonth.getWeekendCount() + publicHolidays.length - publicHolidays.getWeekendCount();
 
   console.log(count);
 };
+
+const Month = {
+  JANUARY: 1,
+  FEBRUARY: 2,
+  MARCH: 3,
+  APRIL: 4,
+  MAY: 5,
+  JUNE: 6,
+  JULY: 7,
+  AUGUST: 8,
+  SEPTEMBER: 9,
+  OCTOBER: 10,
+  NOVEMBER: 11,
+  DECEMBER: 12,
+} as const;
+
+type Month = (typeof Month)[keyof typeof Month];
+
+class _YearMonth {
+  #year;
+  #month;
+
+  constructor(year: number, month: Month) {
+    this.#year = year;
+    this.#month = month;
+  }
+
+  get year() {
+    return this.#year;
+  }
+
+  get month() {
+    return this.#month;
+  }
+
+  getWeekendCount() {
+    const targetYear = this.#year;
+    const targetMonth = this.#month;
+    const lastDayOfMonth = new Date(targetYear, targetMonth, 0, 0).getDate();
+
+    // 日数分の配列を作成して、配列のインデックスから日にちを設定することで対象年月の１日から末日の配列を生成する。
+    const count = [...Array(lastDayOfMonth)]
+      .map((_, i) => {
+        const day = new Date(targetYear, targetMonth - 1, i + 1);
+        return day;
+      })
+      .filter((day) => isWeekEnd(day)).length;
+
+    return count;
+  }
+}
+
+class Days {
+  #days;
+  constructor(days: Date[]) {
+    this.#days = days;
+  }
+
+  get length() {
+    return this.#days.length;
+  }
+
+  getWeekendCount() {
+    const count = this.#days.filter((day) => isWeekEnd(day)).length;
+    return count;
+  }
+}
 
 /**
  * 対象年月の祝日一覧を取得する。
@@ -21,7 +86,8 @@ const main = async (args: string[]) => {
  * @param targetMonth
  * @returns
  */
-export const fetchPublicHolidays = async (targetYear: number, targetMonth: number): Promise<Date[]> => {
+const fetchPublicHolidays = async (targetYearMonth: _YearMonth): Promise<Days> => {
+  const targetYear = targetYearMonth.year;
   // APIから対象年の日本の祝日一覧を取得する。
   const url = `https://date.nager.at/api/v3/publicholidays/${targetYear}/JP`;
   const response = await fetch(url);
@@ -34,9 +100,9 @@ export const fetchPublicHolidays = async (targetYear: number, targetMonth: numbe
     })
     .filter((date) => {
       const month = date.getMonth() + 1;
-      return month === targetMonth;
+      return month === targetYearMonth.month;
     });
-  return publicHolidays;
+  return new Days(publicHolidays);
 };
 
 /**
@@ -44,36 +110,20 @@ export const fetchPublicHolidays = async (targetYear: number, targetMonth: numbe
  * @param inputYearMonth
  * @returns
  */
-export const parseYearMonth = (inputYearMonth: string): Date => {
+const parseYearMonth = (inputYearMonth: string): _YearMonth => {
   const parsedDate = parse(`${inputYearMonth}01`, "yyyyMMdd");
-  return parsedDate;
+  const targetYear = parsedDate.getFullYear();
+  const targetMonth = (parsedDate.getMonth() + 1) as Month;
+  return new _YearMonth(targetYear, targetMonth);
 };
 
 /**
- * 対象年月の１日から末日までの配列を生成する。
- * @param targetYear
- * @param targetMonth
+ * 週末か否か
+ * @param date
  * @returns
  */
-export const generateTargetMonthDays = (targetYear: number, targetMonth: number): Date[] => {
-  const lastDayOfMonth = new Date(targetYear, targetMonth, 0, 0).getDate();
-
-  // 日数分の配列を作成して、配列のインデックスから日にちを設定することで対象年月の１日から末日の配列を生成する。
-  const targetDays = [...Array(lastDayOfMonth)].map((_, i) => {
-    const day = new Date(targetYear, targetMonth - 1, i + 1);
-    return day;
-  });
-  return targetDays;
-};
-
-/**
- * 配列に含まれる週末の日数を数える。
- * @param days
- * @returns
- */
-export const countWeekend = (days: Date[]): number => {
-  const count = days.filter((date) => [0, 6].includes(date.getDay())).length;
-  return count;
+const isWeekEnd = (date: Date): boolean => {
+  return [0, 6].includes(date.getDay());
 };
 
 if (import.meta.main) {
