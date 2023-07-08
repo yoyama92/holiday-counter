@@ -82,8 +82,7 @@ class Dates {
 
 /**
  * 対象年月の祝日一覧を取得する。
- * @param targetYear
- * @param targetMonth
+ * @param targetYearMonth
  * @returns
  */
 const fetchPublicHolidays = async (targetYearMonth: YearMonth): Promise<Dates> => {
