@@ -30,52 +30,52 @@ const Month = {
 
 type Month = (typeof Month)[keyof typeof Month];
 
-class _YearMonth {
-  #year;
-  #month;
+class YearMonth {
+  #year: number;
+  #month: Month;
 
   constructor(year: number, month: Month) {
     this.#year = year;
     this.#month = month;
   }
 
-  get year() {
+  getYear() {
     return this.#year;
   }
 
-  get month() {
+  getMonth() {
     return this.#month;
   }
 
   getWeekendCount() {
-    const targetYear = this.#year;
-    const targetMonth = this.#month;
+    const targetYear = this.getYear();
+    const targetMonth = this.getMonth();
     const lastDayOfMonth = new Date(targetYear, targetMonth, 0, 0).getDate();
 
     // 日数分の配列を作成して、配列のインデックスから日にちを設定することで対象年月の１日から末日の配列を生成する。
     const count = [...Array(lastDayOfMonth)]
       .map((_, i) => {
-        const day = new Date(targetYear, targetMonth - 1, i + 1);
-        return day;
+        const date = new Date(targetYear, targetMonth - 1, i + 1);
+        return date;
       })
-      .filter((day) => isWeekEnd(day)).length;
+      .filter((date) => isWeekEnd(date)).length;
 
     return count;
   }
 }
 
-class Days {
-  #days;
-  constructor(days: Date[]) {
-    this.#days = days;
+class Dates {
+  #dates: Date[];
+  constructor(dates: Date[]) {
+    this.#dates = dates;
   }
 
   get length() {
-    return this.#days.length;
+    return this.#dates.length;
   }
 
   getWeekendCount() {
-    const count = this.#days.filter((day) => isWeekEnd(day)).length;
+    const count = this.#dates.filter((date) => isWeekEnd(date)).length;
     return count;
   }
 }
@@ -86,8 +86,8 @@ class Days {
  * @param targetMonth
  * @returns
  */
-const fetchPublicHolidays = async (targetYearMonth: _YearMonth): Promise<Days> => {
-  const targetYear = targetYearMonth.year;
+const fetchPublicHolidays = async (targetYearMonth: YearMonth): Promise<Dates> => {
+  const targetYear = targetYearMonth.getYear();
   // APIから対象年の日本の祝日一覧を取得する。
   const url = `https://date.nager.at/api/v3/publicholidays/${targetYear}/JP`;
   const response = await fetch(url);
@@ -99,10 +99,11 @@ const fetchPublicHolidays = async (targetYearMonth: _YearMonth): Promise<Days> =
       return date;
     })
     .filter((date) => {
+      const targetMonth = targetYearMonth.getMonth();
       const month = date.getMonth() + 1;
-      return month === targetYearMonth.month;
+      return month == targetMonth;
     });
-  return new Days(publicHolidays);
+  return new Dates(publicHolidays);
 };
 
 /**
@@ -110,11 +111,11 @@ const fetchPublicHolidays = async (targetYearMonth: _YearMonth): Promise<Days> =
  * @param inputYearMonth
  * @returns
  */
-const parseYearMonth = (inputYearMonth: string): _YearMonth => {
+const parseYearMonth = (inputYearMonth: string): YearMonth => {
   const parsedDate = parse(`${inputYearMonth}01`, "yyyyMMdd");
   const targetYear = parsedDate.getFullYear();
   const targetMonth = (parsedDate.getMonth() + 1) as Month;
-  return new _YearMonth(targetYear, targetMonth);
+  return new YearMonth(targetYear, targetMonth);
 };
 
 /**
