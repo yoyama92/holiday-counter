@@ -24,13 +24,13 @@ generateTargetMonthDays targetYear targetMonth = [generateDay dayOfMonth | dayOf
 countWeekend :: [Day] -> Int
 countWeekend dates = length [date | date <- dates, isWeekEnd date]
 
-countHoliday :: Maybe Day -> Int
-countHoliday Nothing = 0
-countHoliday (Just targetYearMonth) = countWeekend (generateTargetMonthDays targetYear targetMonth)
+countTargetMonthHoliday :: Maybe Day -> Int
+countTargetMonthHoliday Nothing = 0
+countTargetMonthHoliday (Just targetYearMonth) = countWeekend (generateTargetMonthDays targetYear targetMonth)
   where
     (targetYear, targetMonth, _) = toGregorian targetYearMonth
 
 main :: IO ()
 main = do
   args <- getArgs
-  print $ countHoliday (parseYearMonth (head args))
+  print $ countTargetMonthHoliday (parseYearMonth (head args))
